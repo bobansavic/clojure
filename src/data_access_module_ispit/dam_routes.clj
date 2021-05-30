@@ -17,5 +17,5 @@
            (GET "/users/get" [] h/find-all-users-handler)
            (GET "/users/find-by-email" [] h/find-by-email-handler)
            (POST "/users/find-by-email-post" [] h/find-by-email-post-handler)
-           (GET "/users/save" [] h/save-user-handler)
+           (POST "/users/save" [] h/save-user-handler)
            (GET "/projects/delete" [] h/delete-project-handler))

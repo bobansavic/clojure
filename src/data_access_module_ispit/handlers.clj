@@ -16,68 +16,60 @@
               (pp/pprint req)
               (str "Hello " (:name (:params req))))})
 
-; Return List of People
 (defn login-handler [req]
   (
     if (= (:authToken (:params req)) "agility")
     (do
-      (let [result (dal/login (:username (:params req)) (:password (:params req)))]
-        (cond (nil? result)
-              {
-               :status  404
-               :headers {"Content-Type" "text/text"}
-               :body    (-> "User not found.")
-               }
-              :else
-              {
-               :status  200
-               :headers {"Content-Type" "application/json"}
-               :body    (-> result)
-               }
-          )
+      (let [result (dal/login (:email (:params req)) (:password (:params req)))]
+        (cond nil? result)
+        {
+         :status  404
+         :headers {"Content-Type" "text/text"}
+         :body    (-> "User not found.")
+         }
+        :else
+        {
+         :status  200
+         :headers {"Content-Type" "application/json"}
+         :body    (-> result)
+         }
         )
       )
+
     {
      :status 401
-     :body "Invalid token!"
+     :body   "Invalid token!"
      }
-  ))
+    )
+  )
 
 (defn find-by-email-handler [req]
-  (
-    if (= (:authToken (:params req)) "agility")
+  (if (= (:authToken (:params req)) "agility")
     (do
       (let [result (dal/find-by-email (:email (:params req)))]
-      (cond nil? result)
-      {
-       :status  404
-       :headers {"Content-Type" "text/text"}
-       :body    "User not found."
-       }
-      :else
-      {
-       :status  200
-       :headers {"Content-Type" "application/json"}
-       :body    (-> result)
-       })
+        (if (nil? result)
+          {
+           :status  404
+           :headers {"Content-Type" "text/text"}
+           :body    "User not found."
+           }
+          {
+           :status  200
+           :headers {"Content-Type" "application/json"}
+           :body    (-> result)
+           }
+          )
+      )
       )
      {
       :status 401
       :headers {"Content-Type" "text/text"}
       :body "Invalid token!"
       }
-  ;if (= (:authToken (:params req)) "agility")
-  ;  {:status  200
-  ;   :headers {"Content-Type" "application/json"}
-  ;   :body    (->
-  ;              (dal/find-by-email (:email (:params req))))}
-  ;  {:status 401
-  ;   :body "Invalid token!"}
   ))
 
 (defn find-by-email-post-handler [req]
   (
-    ;if (= (:authToken (:params req)) "agility")
     if (= (get-in req [:body "authToken"]) "agility")
     {
      :status  200
@@ -92,19 +84,13 @@
     ))
 
 (defn find-all-users-handler [req] (
-  if (= (:authToken (:params req)) "a")
-  ;{:status  200
-  ; :headers {"Content-Type" "text/json"}
-  ; :body    (->
-  ;            (dal/find-all-users))}
-  ;{:status 401
-  ; :body "Invalid token!"
-  ; }
-  {:status 200
-   :body "Cool!"
-   }
-  {:status 400
-   :body "Not cool!"
+  if (= (:authToken (:params req)) "agility")
+  {:status  200
+   :headers {"Content-Type" "text/json"}
+   :body    (->
+              (dal/find-all-users))}
+  {:status 401
+   :body "Invalid token!"
    }
   ))
 
@@ -116,8 +102,18 @@
 
 (defn delete-user-handler [req]
   (
-    if (= (:authToken (:params req)) "token")
-    (dal/delete-user (:user_id (:params req)))
+    if (= (:authToken (:params req)) "agility")
+    (do
+      (let [delete-result (dal/delete-user (:email (:params req)))]
+            (if (nil? delete-result)
+                     {:status 500
+                      :body "Failed to delete user!"
+                      }
+                     {:status 200
+                      :body "User successfully deleted!"
+                      })
+            )
+      )
     {:status 401
      :body "Invalid token!"
      }
@@ -127,20 +123,17 @@
 (defn save-user-handler [req]
   (
     if (= (:authToken (:params req)) "token")
-    (if (nil? (:user_id (:params req)))
-      ({:status 200
+    (if (nil? (get-in req [:body "user_id"]))
+      {:status 200
         :headers {"Content-Type" "text/json"}
         :body (->
-                (dal/update-user
-                  (:firstname (:params req))
-                  (:lastname (:params req))
-                  (:email (:params req))
-                  (:username (:params req))
-                  (:password (:params req))
-                  (:user_id (:params req)))
-                ((dal/bind-role (:user_id (:params req)) (:role_id (:params req)))))
-        })
-      (dal/create-user req)
+                (dal/create-user req))
+        }
+      {:status 200
+       :headers {"Content-Type" "text/json"}
+       :body (->
+               (dal/update-user req))
+       }
       )
     {:status 401
      :body "Invalid token!"

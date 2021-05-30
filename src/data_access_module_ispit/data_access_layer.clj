@@ -18,16 +18,47 @@
   )
 
 (def delete-user-query
-  "DELETE FROM r FROM Users_roles AS r INNER JOIN Users AS u ON r.users_id = u.id WHERE u.id = ?\n\n
-  DELETE FROM p FROM Users_projects AS p INNER JOIN Users AS u ON p.users_id = u.id WHERE u.id = ?\n\n
+  "DELETE FROM p FROM ProjectsUsers AS p INNER JOIN Users AS u ON p.user_id = u.id WHERE u.id = ?\n\n
   DELETE FROM Users WHERE id = ?")
 
 (def delete-project-query
-  "DELETE FROM up FROM Users_projects AS up INNER JOIN Project AS p ON up.projects_id = p.id WHERE p.id = ?\n\n
+  "DELETE FROM up FROM ProjectsUsers AS up INNER JOIN Project AS p ON up.project_id = p.id WHERE p.id = ?\n\n
   DELETE FROM Project WHERE id = ?")
 
 (def find-role-by-user-id-query
-  "SELECT r.id, r.name FROM UserRole AS r INNER JOIN Users_roles AS ur ON r.id = ur.roles_id INNER JOIN Users u ON u.id = ur.users_id WHERE u.id = ?")
+  "SELECT ur.id, ur.name FROM UserRole AS ur INNER JOIN Users AS u ON u.role_id = ur.id AND u.id = ?")
+
+(def find-user-by-username-email-and-pass "SELECT * FROM Users WHERE (username = ? OR email = ?) AND password = ?")
+
+(def get-latest-id-users "SELECT id FROM Users ORDER BY id DESC")
+
+(def get-latest-id-project "SELECT id FROM Users ORDER BY id DESC")
+
+(def get-latest-id-task "SELECT id FROM Users ORDER BY id DESC")
+
+(defn get-id-users []
+  (let [result (j/query (get-db) get-latest-id-users)]
+    (cond (empty? result)
+          1
+          :else
+          (+ 1 (get (first result) :id)))
+    ))
+
+(defn get-id-project []
+  (let [result (j/query (get-db) get-latest-id-project)]
+    (cond (empty? result)
+          1
+          :else
+          (+ 1 (get (first result) :id)))
+    ))
+
+(defn get-id-task []
+  (let [result (j/query (get-db) get-latest-id-task)]
+    (cond (empty? result)
+          1
+          :else
+          (+ 1 (get (first result) :id)))
+    ))
 
 (defn find-user-role [id]
   (let [result (j/query (get-db) [find-role-by-user-id-query id])]
@@ -44,38 +75,50 @@
 (defn find-by-email [email]
   (let [result (j/query (get-db) ["SELECT * FROM Users WHERE email = ?" email])]
     (prn result)
-    (prn (:row-fn :email))
-
     (cond (empty? result)
           nil
           :else
-          (json/write-str(first (vec result))))))
+          (do
+            (prn (str "User found: " (get (first result) :email)))
+            (json/write-str(first result)))
+          )))
 
-(defn login [username password]
-  (let [result (j/query (get-db) ["SELECT * FROM Users WHERE username = ? AND password = ?" username password])]
-    (prn result)
-
+(defn login [email password]
+  (let [result (j/query (get-db) [find-user-by-username-email-and-pass email email password])]
     (cond (empty? result)
           nil
           :else
-          (json/write-str(first (vec result))))))
+          (do
+            (prn (str "User found: " (get (first result) :email)))
+            (json/write-str(first result))))))
 
-(defn delete-user [user_id]
-  (j/db-do-prepared (get-db) [delete-user-query user_id user_id user_id])
-  (let [result (j/query (get-db) ["SELECT * FROM Users WHERE id = ?" user_id])]
-
-    (cond (empty? result)
-          "Successfully deleted user."
-          :else
-          nil))
+(defn delete-user [email]
+  (let [find-result (j/query (get-db) ["SELECT * FROM Users WHERE email=? OR username=?" email email])]
+        (cond (empty? find-result)
+              nil
+              :else
+              (do
+                (let [user-id (get (first find-result) :id)]
+                      (j/db-do-prepared (get-db) [delete-user-query user-id user-id])
+                      (let [result (j/query (get-db) ["SELECT * FROM Users WHERE id = ?" user-id])]
+                        (cond (empty? result)
+                              "Successfully deleted user."
+                              :else
+                              nil))
+                      )
+                )
+              )
+        )
   )
 
 (defn create-user [req]
-  (let [result (j/insert! (get-db) :Users {:firstname (:firstname (:params req))
-                                     :lastname (:lastname (:params req))
-                                     :email (:email (:params req))
-                                     :username (:username (:params req))
-                                     :password (:password (:params req))
+  (let [result (j/insert! (get-db) :Users {:id (get-id-users)
+                                           :firstName (get-in req [:body "firstName"])
+                                           :lastName (get-in req [:body "lastName"])
+                                           :email (get-in req [:body "email"])
+                                           :username (get-in req [:body "username"])
+                                           :password (get-in req [:body "password"])
+                                           :role_id (get-in req [:body "role_id"])
                                      })]
 
     (cond (empty? result)
@@ -84,23 +127,33 @@
           "Successfully created user."))
   )
 
-(defn update-user [firstname lastname email username password user_id]
-  (let [result (j/update! (get-db) :Users {:firstname firstname
-                                     :lastname lastname
-                                     :email email
-                                     :username username
-                                     :password password
-                                     } ["id = ?" user_id])]
+(defn update-user [req]
+  (let [values {}]
+    (if (not (nil? (get-in req [:body "firstName"])))
+    (assoc values :firstName (get-in req [:body "firstName"]))
+    nil)
+    (if (not (nil? (get-in req [:body "lastName"])))
+      (assoc values :lastName (get-in req [:body "lastName"]))
+      nil)
+    (if (not (nil? (get-in req [:body "email"])))
+      (assoc values :email (get-in req [:body "email"]))
+      nil)
+    (if (not (nil? (get-in req [:body "username"])))
+      (assoc values :username (get-in req [:body "username"]))
+      nil)
+    (if (not (nil? (get-in req [:body "password"])))
+      (assoc values :password (get-in req [:body "password"]))
+      nil)
+    (if (not (nil? (get-in req [:body "role_id"])))
+      (assoc values :role_id (get-in req [:body "role_id"]))
+      nil)
 
-    (json/write-str(vec result)))
-  )
+    (let [result (j/update! (get-db) :Users values ["id = ?" (get-in req [:body "user_id"])])]
 
-(defn bind-role [user_id role_id]
-  (let [result (j/insert! (get-db) :Users_roles
-                          {:users_id user_id
-                           :roles_id role_id})]
+      (if (> result 0)
+        "Successfully updated user"))
+        "Nothing changed.")
 
-    (json/write-str(vec result)))
   )
 
 (defn delete-project [project_id]
