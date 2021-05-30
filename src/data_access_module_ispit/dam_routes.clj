@@ -1,8 +1,6 @@
 (ns data-access-module-ispit.dam-routes
   (:use compojure.core ring.middleware.json)
   (:require [compojure.core :refer :all]
-            [compojure.route :as route]
-            [ring.middleware.json :as middleware]
             [ring.util.response :refer [response]]
             [ring.util.io :refer [string-input-stream]]
             [clojure.data.json :refer [json-str]]

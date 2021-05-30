@@ -1,20 +1,5 @@
 (ns data-access-module-ispit.handlers
-  (:require [clojure.pprint :as pp]
-            [clojure.string :as str]
-            [clojure.data.json :as json]
-            [data-access-module-ispit.data-access-layer :as dal]))
-
-(defn simple-body-page [req]
-  {:status  200
-   :headers {"Content-Type" "text/html"}
-   :body    "Hello World"})
-
-(defn hello-name [req]
-  {:status  200
-   :headers {"Content-Type" "text/html"}
-   :body    (->
-              (pp/pprint req)
-              (str "Hello " (:name (:params req))))})
+  (:require [data-access-module-ispit.data-access-layer :as dal]))
 
 (defn login-handler [req]
   (
