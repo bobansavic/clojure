@@ -122,7 +122,7 @@
 
 (defn save-user-handler [req]
   (
-    if (= (:authToken (:params req)) "token")
+    if (= (:authToken (:params req)) "agility")
     (if (nil? (get-in req [:body "user_id"]))
       {:status 200
         :headers {"Content-Type" "text/json"}
@@ -141,10 +141,24 @@
     )
   )
 
+(defn create-project-handler [req]
+  (
+    if (= (:authToken (:params req)) "agility")
+    (do
+      (dal/create-project (:title (:params req)))
+      {:status 201})
+    {:status 401
+     :body "Invalid token!"
+     }
+    )
+  )
+
 (defn delete-project-handler [req]
   (
-    if (= (:authToken (:params req)) "token")
-    (dal/delete-user (:project_id (:params req)))
+    if (= (:authToken (:params req)) "agility")
+    (do
+      (dal/delete-project (:project_id (:params req)))
+      {:status 201})
     {:status 401
      :body "Invalid token!"
      }

@@ -9,8 +9,6 @@
             [data-access-module-ispit.handlers :as h]))
 
 (defroutes app-routes
-           (GET "/" [] h/simple-body-page)
-           (GET "/hello" [] h/hello-name)
            (GET "/users/login" [] h/login-handler)
            (GET "/users/role" [] h/role-handler)
            (GET "/users/delete" [] h/delete-user-handler)
@@ -18,4 +16,5 @@
            (GET "/users/find-by-email" [] h/find-by-email-handler)
            (POST "/users/find-by-email-post" [] h/find-by-email-post-handler)
            (POST "/users/save" [] h/save-user-handler)
-           (GET "/projects/delete" [] h/delete-project-handler))
+           (GET "/projects/delete" [] h/delete-project-handler)
+           (GET "/projects/create" [] h/create-project-handler))

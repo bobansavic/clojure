@@ -22,7 +22,8 @@
   DELETE FROM Users WHERE id = ?")
 
 (def delete-project-query
-  "DELETE FROM up FROM ProjectsUsers AS up INNER JOIN Project AS p ON up.project_id = p.id WHERE p.id = ?\n\n
+  "DELETE FROM t FROM Task AS t INNER JOIN Project AS p ON t.project_id = p.id WHERE p.id = ?\n\n
+  DELETE FROM pu FROM ProjectsUsers AS pu INNER JOIN Project AS p ON pu.project_id = p.id WHERE p.id = ?\n\n
   DELETE FROM Project WHERE id = ?")
 
 (def find-role-by-user-id-query
@@ -156,12 +157,10 @@
 
   )
 
-(defn delete-project [project_id]
-  (j/db-do-prepared (get-db) [delete-project-query project_id])
-  (let [result (j/query (get-db) ["SELECT * FROM Users WHERE id = ?" project_id])]
-
-    (cond (empty? result)
-          "Successfully deleted user."
-          :else
-          nil))
+(defn create-project [title]
+  (j/insert! (get-db) :Project {:id (get-id-project)
+                                :title title})
   )
+
+(defn delete-project [project_id]
+  (j/db-do-prepared (get-db) [delete-project-query project_id project_id project_id]))
