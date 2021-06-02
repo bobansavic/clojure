@@ -29,6 +29,9 @@
 (def find-role-by-user-id-query
   "SELECT ur.id, ur.name FROM UserRole AS ur INNER JOIN Users AS u ON u.role_id = ur.id AND u.id = ?")
 
+(def find-role-by-id-query
+  "SELECT * FROM UserRole WHERE id=?")
+
 (def find-user-by-username-email-and-pass "SELECT * FROM Users WHERE (username = ? OR email = ?) AND password = ?")
 
 (def get-latest-id-users "SELECT id FROM Users ORDER BY id DESC")
@@ -36,6 +39,9 @@
 (def get-latest-id-project "SELECT id FROM Users ORDER BY id DESC")
 
 (def get-latest-id-task "SELECT id FROM Users ORDER BY id DESC")
+
+(def find-projects-by-email-query
+  "SELECT p.id, p.title FROM Project AS p INNER JOIN ProjectsUsers AS pu ON pu.project_id=p.id INNER JOIN Users AS u ON (u.email=? OR u.username=?) AND u.id = pu.user_id")
 
 (defn get-id-users []
   (let [result (j/query (get-db) get-latest-id-users)]
@@ -62,10 +68,10 @@
     ))
 
 (defn find-user-role [id]
-  (let [result (j/query (get-db) [find-role-by-user-id-query id])]
+  (let [result (j/query (get-db) [find-role-by-id-query id])]
     (prn result)
 
-    (json/write-str(vec result))))
+    (json/write-str(first result))))
 
 (defn find-all-users []
   (let [result (j/query (get-db) ["SELECT * FROM Users"])]
@@ -157,10 +163,43 @@
 
   )
 
+(defn find-all-projects []
+  (let [result (j/query (get-db) ["SELECT * FROM Project"])]
+    (prn result)
+
+    (json/write-str(vec result))))
+
+(defn find-projects-by-email [email]
+  (let [result (j/query (get-db) [find-projects-by-email-query email email])]
+    ((if (empty? result)
+      (prn (str "No projects found for " email))
+      (prn result)))
+
+    (json/write-str(vec result))))
+
 (defn create-project [title]
   (j/insert! (get-db) :Project {:id (get-id-project)
                                 :title title})
   )
 
-(defn delete-project [project_id]
-  (j/db-do-prepared (get-db) [delete-project-query project_id project_id project_id]))
+
+(defn delete-project [title]
+  (let [result (j/query (get-db) ["SELECT id FROM Project WHERE title=?" title])]
+    (prn result)
+    (if (empty? result)
+      nil
+      (let [project_id (get (first result) :id)]
+        (prn (str "Deleting project: " title))
+        (j/db-do-prepared (get-db) [delete-project-query project_id project_id project_id])
+        )
+      )
+    )
+  )
+
+(defn check-project-exists [title]
+  (let [result (j/query (get-db) ["SELECT * FROM Project WHERE title=?" title])]
+    (if (empty? result)
+      false
+      true)
+    )
+  )

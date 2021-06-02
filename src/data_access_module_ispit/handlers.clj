@@ -1,6 +1,10 @@
 (ns data-access-module-ispit.handlers
   (:require [data-access-module-ispit.data-access-layer :as dal]))
 
+(defn ping-handler [req]
+  {:status 200}
+  )
+
 (defn login-handler [req]
   (
     if (= (:authToken (:params req)) "agility")
@@ -83,7 +87,7 @@
   {:status  200
    :headers {"Content-Type" "text/json"}
    :body    (->
-              (dal/find-user-role (:user_id (:params req))))})
+              (dal/find-user-role (:role_id (:params req))))})
 
 (defn delete-user-handler [req]
   (
@@ -126,6 +130,46 @@
     )
   )
 
+(defn find-all-projects-handler [req]
+  (
+    if (= (:authToken (:params req)) "agility")
+    {:status 200
+     :headers {"Content-Type" "text/json"}
+     :body (->
+             (dal/find-all-projects))
+     }
+    {:status 401
+     :body "Invalid token!"
+     }
+    )
+  )
+
+(defn find-all-users-handler [req]
+  (
+    if (= (:authToken (:params req)) "agility")
+    {:status  200
+     :headers {"Content-Type" "text/json"}
+     :body (->
+             (dal/find-all-users))}
+    {:status 401
+     :body "Invalid token!"
+     }
+    ))
+
+(defn find-projects-by-email-handler [req]
+  (
+    if (= (:authToken (:params req)) "agility")
+    {:status 200
+     :headers {"Content-Type" "text/json"}
+     :body (->
+             (dal/find-projects-by-email (:email (:params req))))
+     }
+    {:status 401
+     :body "Invalid token!"
+     }
+    )
+  )
+
 (defn create-project-handler [req]
   (
     if (= (:authToken (:params req)) "agility")
@@ -138,11 +182,25 @@
     )
   )
 
-(defn delete-project-handler [req]
+(defn project-title-check-handler [req]
   (
     if (= (:authToken (:params req)) "agility")
     (do
-      (dal/delete-project (:project_id (:params req)))
+      (if (true? (dal/check-project-exists (:title (:params req))))
+        {:status 400}
+        {:status 201}))
+    {:status 401
+     :body "Invalid token!"
+     }
+    )
+  )
+
+(defn delete-project-handler [req]
+  (prn "Received request to delete project.")
+  (
+    if (= (:authToken (:params req)) "agility")
+    (do
+      (dal/delete-project (:title (:params req)))
       {:status 201})
     {:status 401
      :body "Invalid token!"
